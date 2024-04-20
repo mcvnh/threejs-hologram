@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import Stats from 'stats.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import vertexShader from './shaders/base/vertex.glsl';
 import fragmentShader from './shaders/base/fragment.glsl';
@@ -83,15 +84,34 @@ renderer.setPixelRatio(sizes.pixelRatio);
 // YOUR CODE HERE
 // ===========================================================================
 
-const box = new THREE.Mesh(
-  new THREE.BoxGeometry(1,1,1),
+const loader = new GLTFLoader();
+loader.load('./soldier.glb', (gltf) => {
+  const group = gltf.scene;
+  group.scale.set(0.05, 0.05, 0.05)
+  group.position.y = -0.8;
+  group.material = holographicMaterial;
+
+  group.traverse(child => {
+    if (child.isMesh) {
+      child.material = holographicMaterial;
+    }
+  })
+
+  scene.add(group);
+})
+
+const holographicMaterial = 
   new THREE.ShaderMaterial({ 
     vertexShader,
     fragmentShader,
-    wireframe: true 
-  })
-);
-scene.add(box);
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: new THREE.Uniform(0),
+    },
+  });
 
 // ============================================================================
 
@@ -105,6 +125,8 @@ const tick = () => {
   stats.begin();
 
   const elapsedTime = clock.getElapsedTime();
+
+  holographicMaterial.uniforms.uTime.value = elapsedTime;
 
   // Update controls
   controls.update();
