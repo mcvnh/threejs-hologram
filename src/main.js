@@ -3,22 +3,28 @@ import * as THREE from 'three';
 import GUI from 'lil-gui';
 import Stats from 'stats.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 import vertexShader from './shaders/base/vertex.glsl';
 import fragmentShader from './shaders/base/fragment.glsl';
+import { OBJLoader } from 'three/examples/jsm/Addons.js';
 
 /**
  * Debug UI
  */
 const gui = new GUI({ width: 300 });
 const debugObject = {
-  background: 0x272626,
+  background: 0x140f0f,
+  color: 0x4fa1c9,
+
 };
 
 gui.addColor(debugObject, 'background').onChange(() => {
   renderer.setClearColor(debugObject.background);
-})
+});
+
+gui.addColor(debugObject, 'color').onChange(() => {
+  model.material.uniforms.uColor.value.set(debugObject.color);
+});
 
 const stats = new Stats();
 stats.showPanel(0);
@@ -62,7 +68,7 @@ const scene = new THREE.Scene();
  * Camera
  */
 const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 100);
-camera.position.set(3, 3, 3);
+camera.position.set(2.5, .2, -4);
 scene.add(camera);
 
 /**
@@ -84,24 +90,24 @@ renderer.setPixelRatio(sizes.pixelRatio);
 // YOUR CODE HERE
 // ===========================================================================
 
-const loader = new GLTFLoader();
-loader.load('./soldier.glb', (gltf) => {
-  const group = gltf.scene;
-  group.scale.set(0.05, 0.05, 0.05)
-  group.position.y = -0.8;
-  group.material = holographicMaterial;
+let model = null;
+const loader = new OBJLoader();
+loader.load('./soldier.obj', (obj) => {
+  model = obj;
 
-  group.traverse(child => {
-    if (child.isMesh) {
+  model.scale.set(0.05, 0.05, 0.05)
+  model.material = holographicMaterial;
+
+  model.traverse(child => {
       child.material = holographicMaterial;
-    }
   })
 
-  scene.add(group);
+  scene.add(model);
 })
 
-const holographicMaterial = 
-  new THREE.ShaderMaterial({ 
+// const holographicMaterial = new THREE.MeshBasicMaterial({ color: 0x110000 });
+const holographicMaterial =
+  new THREE.ShaderMaterial({
     vertexShader,
     fragmentShader,
     transparent: true,
@@ -110,6 +116,7 @@ const holographicMaterial =
     side: THREE.DoubleSide,
     uniforms: {
       uTime: new THREE.Uniform(0),
+      uColor: new THREE.Uniform(new THREE.Color(debugObject.color)),
     },
   });
 
@@ -127,6 +134,10 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime();
 
   holographicMaterial.uniforms.uTime.value = elapsedTime;
+
+  if (model) {
+    model.rotation.y = Math.sin(elapsedTime);
+  }
 
   // Update controls
   controls.update();
